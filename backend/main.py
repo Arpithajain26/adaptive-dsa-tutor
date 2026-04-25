@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from pydantic import BaseModel
 import uvicorn
 from typing import List, Optional, Dict
 
-from memory import memory_manager
+from memory import memory_manager, user_manager
 from agent import tutor_agent
 
 app = FastAPI(title="Adaptive DSA Tutor API")
@@ -12,11 +15,14 @@ app = FastAPI(title="Adaptive DSA Tutor API")
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Define paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
 
 # --- Schemas ---
 
@@ -74,15 +80,39 @@ class ProgressResponse(BaseModel):
     topic_accuracy: Dict[str, int]
     suggested_next_topic: Optional[str] = None
 
+class AuthRequest(BaseModel):
+    username: str
+    password: str
+    email: Optional[str] = None
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    session_id: Optional[str] = None
+    username: Optional[str] = None
+
 # --- Endpoints ---
 
-@app.get("/")
-def root():
-    return {
-        "message": "Adaptive DSA Tutor API is running!",
-        "docs": "Visit /docs to test all endpoints",
-        "endpoints": ["/start", "/answer", "/progress", "/hint", "/explain", "/summary", "/reset"]
     }
+
+# --- Serve Frontend ---
+
+# Mount static files (JS, CSS, etc.)
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # API routes should be handled by their respective decorators
+        if full_path.startswith("api/") or full_path in ["start", "answer", "progress", "hint", "explain", "summary", "reset", "signup", "signin"]:
+            raise HTTPException(status_code=404)
+        
+        file_path = os.path.join(FRONTEND_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+else:
+    print(f"WARNING: Frontend directory not found at {FRONTEND_DIR}. Only API will be available.")
 
 @app.post("/start", response_model=StartResponse)
 async def start_session(req: StartRequest):
@@ -240,6 +270,24 @@ def reset_session(req: ResetRequest):
     """Resets the user's session entirely."""
     memory_manager.reset_session(req.session_id)
     return {"message": "Session reset successfully"}
+
+@app.post("/signup", response_model=AuthResponse)
+async def signup(req: AuthRequest):
+    success = user_manager.signup(req.username, req.password, req.email)
+    if success:
+        return AuthResponse(success=True, message="Signup successful", session_id=req.username, username=req.username)
+    else:
+        return AuthResponse(success=False, message="Username already exists")
+
+@app.post("/signin", response_model=AuthResponse)
+async def signin(req: AuthRequest):
+    result = user_manager.signin(req.username, req.password)
+    if result == 'ok':
+        return AuthResponse(success=True, message="Signin successful", session_id=req.username, username=req.username)
+    elif result == 'user_not_found':
+        return AuthResponse(success=False, message="User not found")
+    else:
+        return AuthResponse(success=False, message="Incorrect password")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

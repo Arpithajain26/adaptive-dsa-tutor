@@ -1,0 +1,8 @@
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+backend/session_data.json
+backend/users_data.json
+backend.zip
+adaptive-dsa-tutor/

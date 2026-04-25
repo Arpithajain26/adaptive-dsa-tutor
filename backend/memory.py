@@ -5,6 +5,13 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 SESSION_FILE = "session_data.json"
+USER_FILE = "users_data.json"
+
+class User(BaseModel):
+    username: str
+    password: str # Plain text for hackathon, but usually hashed
+    email: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
 
 class SessionState(BaseModel):
     current_level: str = "beginner"
@@ -105,7 +112,7 @@ class MemoryManager:
             if topic in state.weak_topics:
                 state.weak_topics.remove(topic)
         else:
-            state.streak = min(-1, state.streak - 1)
+            state.streak = max(-1, state.streak - 1)
             if topic not in state.weak_topics:
                 state.weak_topics.append(topic)
         
@@ -133,3 +140,52 @@ class MemoryManager:
 
 # Global memory manager instance for the app
 memory_manager = MemoryManager()
+
+class UserManager:
+    def __init__(self):
+        self.users: Dict[str, User] = {}
+        self._load_all()
+
+    def _load_all(self):
+        if os.path.exists(USER_FILE):
+            with open(USER_FILE, "r") as f:
+                data = json.load(f)
+                for username, udata in data.items():
+                    self.users[username] = User(**udata)
+
+    def _save_all(self):
+        with open(USER_FILE, "w") as f:
+            data = {uname: user.model_dump() for uname, user in self.users.items()}
+            json.dump(data, f, indent=2)
+
+    def signup(self, username, password, email=None) -> bool:
+        username = username.strip().lower()
+        if username in self.users:
+            return False
+        self.users[username] = User(username=username, password=password, email=email)
+        self._save_all()
+        print(f"DEBUG: New user signed up: {username}")
+        return True
+
+    def signin(self, username_or_email, password) -> str:
+        """Returns 'ok', 'user_not_found', or 'incorrect_password'"""
+        identifier = username_or_email.strip().lower()
+        
+        # 1. Try finding by username (exact key)
+        user = self.users.get(identifier)
+        
+        # 2. If not found, try finding by email
+        if not user:
+            for u in self.users.values():
+                if u.email and u.email.lower() == identifier:
+                    user = u
+                    break
+                    
+        if not user:
+            return 'user_not_found'
+            
+        if user.password == password:
+            return 'ok'
+        return 'incorrect_password'
+
+user_manager = UserManager()
