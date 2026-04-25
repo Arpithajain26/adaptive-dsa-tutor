@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-900: #05050a;
+  --color-brand-800: #0a0a14;
+  --color-brand-700: #121221;
+  
+  --color-accent-primary: #8b5cf6; /* Vibrant Violet */
+  --color-accent-secondary: #06b6d4; /* Neon Cyan */
+  --color-accent-tertiary: #f43f5e; /* Electric Rose */
+  
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-bg: rgba(18, 18, 33, 0.6);
+  --color-glass-bg-hover: rgba(255, 255, 255, 0.05);
+
+  --animate-glow: glow 3s ease-in-out infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.2), 0 0 20px rgba(6, 182, 212, 0.1);
+    }
+    to {
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.6), 0 0 30px rgba(6, 182, 212, 0.4);
+    }
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[var(--color-glass-bg)] backdrop-blur-xl border border-[var(--color-glass-border)] rounded-2xl shadow-xl;
+  }
+  
+  .glass-panel-hover {
+    @apply hover:bg-[var(--color-glass-bg-hover)] transition-all duration-300;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-cyan-400 to-rose-400;
+  }
+}
+
+body {
+  @apply bg-[#030305] text-slate-200 font-sans antialiased min-h-screen relative overflow-x-hidden;
+}
+
+/* Base background glow effects */
+body::before {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 60%);
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -20%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-[#05050a];
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-violet-900/50 rounded-full border border-violet-500/20;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-violet-700/80;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
