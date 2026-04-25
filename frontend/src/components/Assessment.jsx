@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, BrainCircuit, Loader2, Target, ArrowRight, CheckCircle2, XCircle } from 'lucide-react';
+import axios from 'axios';
+import { User, BrainCircuit, Loader2, Target, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const assessmentQuestions = [
   {
@@ -42,7 +44,11 @@ export default function Assessment() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Start the assessment
+    // Check session
+    if (!localStorage.getItem('session_id')) {
+      navigate('/login');
+    }
+
     setMessages([
       { 
         role: 'bot', 
@@ -50,36 +56,30 @@ export default function Assessment() {
         options: assessmentQuestions[0].options
       }
     ]);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleOptionClick = async (option) => {
-    // Immediately disable options on the current message to prevent double clicks
     setMessages(prev => {
       const newMessages = [...prev];
       if (newMessages.length > 0) {
-        newMessages[newMessages.length - 1].options = null; // hide options after click
+        newMessages[newMessages.length - 1].options = null; 
       }
       return newMessages;
     });
 
-    // Add user's selected answer
     setMessages(prev => [...prev, { role: 'user', content: option.text }]);
     
-    if (option.isCorrect) {
-      setScore(s => s + 1);
-    }
+    if (option.isCorrect) setScore(s => s + 1);
     
     setLoading(true);
 
     try {
-      // Simulate "thinking" delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Provide feedback
       setMessages(prev => [...prev, { 
         role: 'bot', 
         content: option.isCorrect 
@@ -89,7 +89,6 @@ export default function Assessment() {
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Go to next question or finish
       if (currentQIndex + 1 < assessmentQuestions.length) {
         const nextQ = currentQIndex + 1;
         setCurrentQIndex(nextQ);
@@ -99,11 +98,20 @@ export default function Assessment() {
           options: assessmentQuestions[nextQ].options
         }]);
       } else {
-        // Finalize level
         const finalScore = score + (option.isCorrect ? 1 : 0);
         let level = 'Beginner';
         if (finalScore === 2) level = 'Intermediate';
         if (finalScore === 3) level = 'Advanced';
+
+        // Mark as complete in backend
+        const sessionId = localStorage.getItem('session_id');
+        if (sessionId) {
+          try {
+            await axios.post('/api/complete_assessment', { session_id: sessionId });
+          } catch(e) {
+            console.error("Failed to mark assessment complete", e);
+          }
+        }
 
         setMessages(prev => [...prev, { 
           role: 'bot', 
@@ -117,14 +125,18 @@ export default function Assessment() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen flex items-center justify-center p-4 relative z-10"
+    >
       <div className="w-full max-w-3xl glass-panel h-[700px] flex flex-col relative overflow-hidden">
-        {/* Top ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-8 bg-violet-500/20 blur-2xl rounded-full pointer-events-none"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-8 bg-primary/20 blur-2xl rounded-full pointer-events-none"></div>
 
-        <div className="p-4 border-b border-slate-800 bg-[#0a0a14]/80 flex items-center gap-3">
-          <div className="p-2 bg-violet-500/20 rounded-lg border border-violet-500/30">
-            <Target className="w-5 h-5 text-violet-400" />
+        <div className="p-4 border-b border-white/5 bg-[#09090b]/80 flex items-center gap-3">
+          <div className="p-2 bg-primary/20 rounded-lg border border-primary/30">
+            <Target className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-white leading-tight">AI Skill Assessment</h2>
@@ -134,78 +146,90 @@ export default function Assessment() {
 
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar z-10 relative">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} mb-6 group`}>
-              <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
-                {msg.role === 'bot' && (
-                  <div className="w-8 h-8 mr-3 rounded-full flex items-center justify-center shrink-0 border bg-[#0a0a14] border-violet-500/30 shadow-inner">
-                    <BrainCircuit className="w-4 h-4 text-violet-400" />
+          <AnimatePresence>
+            {messages.map((msg, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} mb-6 group`}
+              >
+                <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+                  {msg.role === 'bot' && (
+                    <div className="w-8 h-8 mr-3 rounded-full flex items-center justify-center shrink-0 border bg-[#09090b] border-primary/30 shadow-inner">
+                      <BrainCircuit className="w-4 h-4 text-emerald-400" />
+                    </div>
+                  )}
+                  
+                  <div className={`max-w-[85%] rounded-2xl px-6 py-4 border ${
+                    msg.role === 'user' 
+                      ? 'bg-secondary text-white rounded-tr-sm shadow-[0_0_15px_rgba(99,102,241,0.3)] border-transparent' 
+                      : 'glass-panel rounded-tl-sm border-white/5 bg-[#18181b]/50'
+                  }`}>
+                    <div className="whitespace-pre-wrap leading-relaxed font-medium">
+                      {msg.content}
+                    </div>
                   </div>
-                )}
-                
-                <div className={`max-w-[85%] rounded-2xl px-6 py-4 border ${
-                  msg.role === 'user' 
-                    ? 'bg-cyan-600 text-white rounded-tr-sm shadow-[0_0_15px_rgba(6,182,212,0.3)] border-transparent' 
-                    : 'glass-panel rounded-tl-sm'
-                }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed font-medium">
-                    {msg.content}
-                  </div>
+
+                  {msg.role === 'user' && (
+                    <div className="w-8 h-8 ml-3 rounded-full bg-[#18181b] border border-secondary/30 flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-indigo-300" />
+                    </div>
+                  )}
                 </div>
 
-                {msg.role === 'user' && (
-                  <div className="w-8 h-8 ml-3 rounded-full bg-[#121221] border border-cyan-500/30 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-cyan-300" />
-                  </div>
+                {msg.options && !loading && (
+                  <motion.div 
+                    initial={{ opacity: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, marginTop: 16 }}
+                    className="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 w-[85%]"
+                  >
+                    {msg.options.map((option, optIdx) => (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        key={optIdx}
+                        onClick={() => handleOptionClick(option)}
+                        className="bg-[#18181b] hover:bg-primary/20 border border-slate-800 hover:border-primary/50 text-slate-200 font-medium py-3 px-4 rounded-xl text-left transition-all hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                      >
+                        {option.text}
+                      </motion.button>
+                    ))}
+                  </motion.div>
                 )}
-              </div>
-
-              {/* Render MCQ Options if present */}
-              {msg.options && !loading && (
-                <div className="mt-4 ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 w-[85%]">
-                  {msg.options.map((option, optIdx) => (
-                    <button
-                      key={optIdx}
-                      onClick={() => handleOptionClick(option)}
-                      className="bg-[#121221] hover:bg-violet-900/30 border border-slate-700 hover:border-violet-500/50 text-slate-200 font-medium py-3 px-4 rounded-xl text-left transition-all hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)]"
-                    >
-                      {option.text}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
           
           {loading && (
-            <div className="flex justify-start mb-6">
-              <div className="w-8 h-8 mr-3 rounded-full bg-[#0a0a14] border border-violet-500/30 flex items-center justify-center shrink-0">
-                <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start mb-6">
+              <div className="w-8 h-8 mr-3 rounded-full bg-[#09090b] border border-primary/30 flex items-center justify-center shrink-0">
+                <BrainCircuit className="w-4 h-4 text-emerald-400 animate-pulse" />
               </div>
               <div className="glass-panel rounded-tl-sm px-5 py-3 flex items-center gap-3 text-slate-300">
-                <Loader2 className="w-4 h-4 animate-spin text-violet-400" /> Analyzing...
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> Analyzing...
               </div>
-            </div>
+            </motion.div>
           )}
 
           {assessmentComplete && (
-            <div className="flex justify-center mt-8 mb-4">
+            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center mt-8 mb-4">
               <button 
                 onClick={() => navigate('/dashboard')}
-                className="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-bold py-3 px-8 rounded-xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.05] shadow-[0_0_20px_rgba(139,92,246,0.4)] animate-bounce"
+                className="bg-gradient-to-r from-primary to-secondary hover:from-primary hover:to-secondary text-white font-bold py-3 px-8 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-bounce"
               >
                 Continue to Dashboard <ArrowRight className="w-5 h-5" />
               </button>
-            </div>
+            </motion.div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area (Hidden during MCQ assessment, just shows status) */}
-        <div className="p-4 bg-[#05050a]/80 backdrop-blur-xl border-t border-slate-800 z-10 flex items-center justify-center text-sm text-slate-500 font-medium h-[72px]">
+        <div className="p-4 bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 z-10 flex items-center justify-center text-sm text-slate-500 font-medium h-[72px]">
           {assessmentComplete ? "Assessment complete." : "Please select an option above."}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

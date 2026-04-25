@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from memory import memory_manager
 from agent import tutor_agent
@@ -23,11 +23,16 @@ app.add_middleware(
 class StartRequest(BaseModel):
     session_id: str
     topic: str
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
 
 class StartResponse(BaseModel):
     question: str
     topic: str
     level: str
+    boilerplate_code: Optional[str] = None
+    visualization_idea: Optional[str] = None
+    test_cases: Optional[List[Dict[str, str]]] = None
 
 class AnswerRequest(BaseModel):
     session_id: str
@@ -40,6 +45,10 @@ class AnswerResponse(BaseModel):
     next_question: str
     next_topic: str
     next_level: str
+    next_boilerplate: Optional[str] = None
+    next_visualization: Optional[str] = None
+    next_test_cases: Optional[List[Dict[str, str]]] = None
+    test_case_results: Optional[List[Dict[str, Any]]] = None
     confidence_score: int
     weak_topic_flag: bool
     streak: int
@@ -85,31 +94,43 @@ def root():
     }
 
 @app.post("/start", response_model=StartResponse)
-async def start_session(req: StartRequest):
+def start_session(req: StartRequest):
     """Initializes a session and returns the first question."""
     try:
         # Get or create session
         state = memory_manager.get_session(req.session_id)
         state.current_topic = req.topic
         
-        # Generate question based on current topic and level
-        question_resp = await tutor_agent.generate_question(req.topic, state.current_level, state.asked_questions)
+        # Update user details if provided
+        if req.user_name: state.user_name = req.user_name
+        if req.user_email: state.user_email = req.user_email
         
-        # Store last question to evaluate future answer
+        # Generate question based on current topic and level
+        question_resp = tutor_agent.generate_question(req.topic, state.current_level, state.asked_questions)
+        
         state.last_question = question_resp.question
+        state.last_boilerplate = question_resp.boilerplate_code
+        state.last_visualization = question_resp.visualization_idea
+        state.last_test_cases = question_resp.test_cases
         state.asked_questions.append(question_resp.question)
         memory_manager.update_session(req.session_id, state)
         
         return StartResponse(
             question=question_resp.question,
             topic=question_resp.topic,
-            level=question_resp.level
+            level=question_resp.level,
+            boilerplate_code=question_resp.boilerplate_code,
+            visualization_idea=question_resp.visualization_idea,
+            test_cases=question_resp.test_cases
         )
     except Exception as e:
+        print(f"ERROR in start_session: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/answer", response_model=AnswerResponse)
-async def submit_answer(req: AnswerRequest):
+def submit_answer(req: AnswerRequest):
     """Evaluates the given answer and returns feedback + next question."""
     try:
         state = memory_manager.get_session(req.session_id)
@@ -118,7 +139,7 @@ async def submit_answer(req: AnswerRequest):
             raise HTTPException(status_code=400, detail="No active question found. Please call /start first.")
             
         # 1. Evaluate the answer
-        eval_resp = await tutor_agent.evaluate_answer(
+        eval_resp = tutor_agent.evaluate_answer(
             question=state.last_question,
             answer=req.answer,
             topic=state.current_topic,
@@ -137,10 +158,12 @@ async def submit_answer(req: AnswerRequest):
         weak_topic_flag = current_topic_acc < 50
         
         # 3. Generate the next question
-        next_question_resp = await tutor_agent.generate_question(state.current_topic, state.current_level, state.asked_questions)
+        next_question_resp = tutor_agent.generate_question(state.current_topic, state.current_level, state.asked_questions)
         
-        # Store new question
         state.last_question = next_question_resp.question
+        state.last_boilerplate = next_question_resp.boilerplate_code
+        state.last_visualization = next_question_resp.visualization_idea
+        state.last_test_cases = next_question_resp.test_cases
         state.asked_questions.append(next_question_resp.question)
         memory_manager.update_session(req.session_id, state)
         
@@ -151,6 +174,10 @@ async def submit_answer(req: AnswerRequest):
             next_question=next_question_resp.question,
             next_topic=next_question_resp.topic,
             next_level=next_question_resp.level,
+            next_boilerplate=next_question_resp.boilerplate_code,
+            next_visualization=next_question_resp.visualization_idea,
+            next_test_cases=next_question_resp.test_cases,
+            test_case_results=eval_resp.test_case_results,
             confidence_score=eval_resp.confidence_score,
             weak_topic_flag=weak_topic_flag,
             streak=state.streak
@@ -161,7 +188,7 @@ async def submit_answer(req: AnswerRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/progress", response_model=ProgressResponse)
-async def get_progress(session_id: str):
+def get_progress(session_id: str):
     """Returns the user's progress and current level."""
     try:
         state = memory_manager.get_session(session_id)
@@ -173,7 +200,7 @@ async def get_progress(session_id: str):
         # But to be fast, if they have no attempts, we suggest arrays.
         suggested_topic = "Arrays" 
         if accuracy:
-            summary_resp = await tutor_agent.get_session_summary(accuracy)
+            summary_resp = tutor_agent.get_session_summary(accuracy)
             suggested_topic = summary_resp.suggested_next_topic
 
         return ProgressResponse(
@@ -188,14 +215,14 @@ async def get_progress(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/hint", response_model=HintResponse)
-async def get_hint(req: HintRequest):
+def get_hint(req: HintRequest):
     """Provides a progressive hint for the current question."""
     try:
         state = memory_manager.get_session(req.session_id)
         if not state.last_question or not state.current_topic:
             raise HTTPException(status_code=400, detail="No active question found.")
             
-        hint_resp = await tutor_agent.get_progressive_hint(
+        hint_resp = tutor_agent.get_progressive_hint(
             question=state.last_question,
             topic=state.current_topic,
             level=state.current_level,
@@ -208,14 +235,14 @@ async def get_hint(req: HintRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/explain", response_model=ExplainResponse)
-async def get_explanation(req: ExplainRequest):
+def get_explanation(req: ExplainRequest):
     """Provides a step-by-step explanation for the current question."""
     try:
         state = memory_manager.get_session(req.session_id)
         if not state.last_question:
             raise HTTPException(status_code=400, detail="No active question found.")
             
-        explain_resp = await tutor_agent.get_explanation(
+        explain_resp = tutor_agent.get_explanation(
             question=state.last_question,
             user_answer=req.user_answer
         )
@@ -226,20 +253,49 @@ async def get_explanation(req: ExplainRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/summary", response_model=SummaryResponse)
-async def get_summary(session_id: str):
+def get_summary(session_id: str):
     """Returns a wrap-up summary of the session."""
     try:
         accuracy = memory_manager.get_topic_accuracy(session_id)
-        summary_resp = await tutor_agent.get_session_summary(accuracy)
+        summary_resp = tutor_agent.get_session_summary(accuracy)
         return summary_resp
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/complete_assessment")
+def complete_assessment(req: ResetRequest):
+    """Marks the assessment as complete for the session."""
+    state = memory_manager.get_session(req.session_id)
+    state.is_assessed = True
+    memory_manager.update_session(req.session_id, state)
+    return {"message": "Assessment marked as complete"}
 
 @app.post("/reset")
 def reset_session(req: ResetRequest):
     """Resets the user's session entirely."""
     memory_manager.reset_session(req.session_id)
     return {"message": "Session reset successfully"}
+
+@app.get("/resume")
+def resume_session(session_id: str):
+    """Checks if a session exists and returns the current state for resuming."""
+    try:
+        state = memory_manager.get_session(session_id)
+        if not state.last_question or not state.current_topic:
+            return {"can_resume": False}
+            
+        return {
+            "can_resume": True,
+            "topic": state.current_topic,
+            "question": state.last_question,
+            "boilerplate": state.last_boilerplate,
+            "visualization": state.last_visualization,
+            "test_cases": state.last_test_cases,
+            "level": state.current_level,
+            "user_name": state.user_name
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -7,12 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#00D4FF',
-        correct: '#00FF88',
-        wrong: '#FF4444',
-        hint: '#FFD700',
-        dark: '#0D0221',
-        card: '#1a1a2e',
+        primary: '#10b981', // emerald-500
+        secondary: '#6366f1', // indigo-500
+        correct: '#10b981',
+        wrong: '#ef4444', // red-500
+        hint: '#f59e0b', // amber-500
+        dark: '#09090b', // obsidian
+        card: '#18181b', // zinc-900
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

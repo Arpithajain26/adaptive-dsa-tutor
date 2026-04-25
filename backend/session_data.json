@@ -1,0 +1,113 @@
+{
+  "b@gmail.com": {
+    "user_name": null,
+    "user_email": null,
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [],
+    "current_topic": null,
+    "last_question": null,
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": false,
+    "topic_attempts": {},
+    "topic_correct": {},
+    "asked_questions": [],
+    "total_questions": 0,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T16:10:49.626236",
+    "last_updated": "2026-04-25T16:10:49.626275"
+  },
+  "z@gmail.com": {
+    "user_name": null,
+    "user_email": "z@gmail.com",
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [
+      "Arrays"
+    ],
+    "current_topic": "Arrays",
+    "last_question": "Find the maximum element in a Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": false,
+    "topic_attempts": {
+      "Arrays": 8
+    },
+    "topic_correct": {},
+    "asked_questions": [
+      "[MOCK] Write a function to reverse a Arrays in O(n) time and O(1) space. Assume level is beginner.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays."
+    ],
+    "total_questions": 8,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T16:42:24.296090",
+    "last_updated": "2026-04-25T20:21:45.873335"
+  },
+  "test-session-1": {
+    "user_name": null,
+    "user_email": null,
+    "current_level": "beginner",
+    "score": 0,
+    "streak": -1,
+    "weak_topics": [
+      "Arrays"
+    ],
+    "current_topic": "Arrays",
+    "last_question": "Find the maximum element in a Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": false,
+    "topic_attempts": {
+      "Arrays": 1
+    },
+    "topic_correct": {},
+    "asked_questions": [
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays."
+    ],
+    "total_questions": 1,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T17:32:52.987137",
+    "last_updated": "2026-04-25T17:33:03.082464"
+  },
+  "guest_user": {
+    "user_name": null,
+    "user_email": null,
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [],
+    "current_topic": "Arrays",
+    "last_question": "Find the maximum element in a Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": false,
+    "topic_attempts": {},
+    "topic_correct": {},
+    "asked_questions": [
+      "Find the maximum element in a Arrays."
+    ],
+    "total_questions": 0,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T17:35:07.469619",
+    "last_updated": "2026-04-25T17:35:07.854258"
+  }
+}

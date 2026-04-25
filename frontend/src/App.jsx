@@ -1,36 +1,29 @@
-import React, { useState } from 'react';
-import TopicSelector from './components/TopicSelector';
-import Chat from './components/Chat';
-import Progress from './components/Progress';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+import LandingPage from './components/LandingPage';
+import Login from './components/Login';
+import Signup from './components/Signup';
+import Assessment from './components/Assessment';
+import Dashboard from './components/Dashboard';
+import LearnSession from './components/LearnSession';
 
 function App() {
-  const [screen, setScreen] = useState('select'); // 'select' | 'chat'
-  const [selectedTopic, setSelectedTopic] = useState(null);
-  const [scoreData, setScoreData] = useState({ level: 'Beginner', score: 0, streak: 0 });
-
-  const handleStartTopic = (topic) => {
-    setSelectedTopic(topic);
-    setScreen('chat');
-  };
-
   return (
-    <div className="min-h-screen bg-dark text-white font-sans selection:bg-primary selection:text-white flex flex-col">
-      {screen === 'chat' && <Progress scoreData={scoreData} setScoreData={setScoreData} />}
-      
-      <main className="flex-1 flex flex-col relative w-full overflow-hidden">
-        {screen === 'select' && (
-          <TopicSelector onStart={handleStartTopic} />
-        )}
-        
-        {screen === 'chat' && (
-          <Chat 
-            topic={selectedTopic} 
-            scoreData={scoreData} 
-            setScoreData={setScoreData} 
-          />
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-[#05050a] text-white font-sans selection:bg-violet-500/30 selection:text-white flex flex-col">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/assessment" element={<Assessment />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/learn" element={<LearnSession />} />
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 

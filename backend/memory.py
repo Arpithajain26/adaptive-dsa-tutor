@@ -7,12 +7,18 @@ from pydantic import BaseModel, Field
 SESSION_FILE = "session_data.json"
 
 class SessionState(BaseModel):
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
     current_level: str = "beginner"
     score: int = 0
     streak: int = 0
     weak_topics: List[str] = []
     current_topic: Optional[str] = None
     last_question: Optional[str] = None
+    last_boilerplate: Optional[str] = None
+    last_visualization: Optional[str] = None
+    last_test_cases: Optional[List[Dict[str, str]]] = None
+    is_assessed: bool = False
     # Use Field(default_factory=dict/list) to avoid mutable defaults warning in pydantic
     topic_attempts: Dict[str, int] = Field(default_factory=dict)
     topic_correct: Dict[str, int] = Field(default_factory=dict)
