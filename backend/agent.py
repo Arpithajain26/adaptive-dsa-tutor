@@ -298,4 +298,72 @@ class TutorAgent:
                 suggested_next_topic="Trees"
             )
 
+    def analyze_code(self, code: str, language: str, question: str, test_cases: List[Dict[str, str]]) -> dict:
+        """Analyzes student code logic using AI without executing it."""
+
+        system_prompt = """You are an expert code reviewer and DSA tutor.
+        Analyze code logic WITHOUT executing it.
+        Always respond in valid JSON format only.
+        No extra text outside JSON."""
+
+        test_cases_str = json.dumps(test_cases) if test_cases else "[]"
+
+        prompt = f"""
+        Student's code ({language}):
+        ```
+        {code}
+        ```
+
+        Question: {question}
+
+        Test cases: {test_cases_str}
+
+        WITHOUT executing the code, analyze if the logic is correct.
+        For each test case, determine what the code would return.
+
+        Respond ONLY with this JSON:
+        {{
+            "test_results": [
+                {{
+                    "test_case": "the input",
+                    "expected": "expected output",
+                    "got": "what student code would return",
+                    "passed": true or false,
+                    "feedback": "one line explanation"
+                }}
+            ],
+            "overall_correct": true or false,
+            "time_complexity": "e.g. O(n)",
+            "space_complexity": "e.g. O(1)",
+            "feedback": "Overall feedback on the solution",
+            "suggestion": "One improvement suggestion"
+        }}
+        """
+
+        content = make_llm_call(system_prompt, prompt, max_tokens=1000)
+
+        if not content:
+            return {
+                "test_results": [],
+                "overall_correct": False,
+                "time_complexity": "Unknown",
+                "space_complexity": "Unknown",
+                "feedback": "Could not analyze code. Please try again.",
+                "suggestion": "Ensure your code is syntactically correct."
+            }
+
+        try:
+            clean = extract_json(content)
+            return json.loads(clean)
+        except Exception as e:
+            print(f"Parse error in analyze_code: {e}")
+            return {
+                "test_results": [],
+                "overall_correct": False,
+                "time_complexity": "Unknown",
+                "space_complexity": "Unknown",
+                "feedback": "Analysis failed. Please try again.",
+                "suggestion": "Check your code syntax."
+            }
+
 tutor_agent = TutorAgent()

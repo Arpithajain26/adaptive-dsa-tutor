@@ -297,5 +297,39 @@ def resume_session(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class RunCodeRequest(BaseModel):
+    session_id: str
+    code: str
+    language: str = "python"
+    question: Optional[str] = None
+
+@app.post("/run-code")
+def run_code(req: RunCodeRequest):
+    """Analyzes student code using AI without executing it."""
+    try:
+        state = memory_manager.get_session(req.session_id)
+        question = req.question or state.last_question or "Unknown question"
+        test_cases = state.last_test_cases or []
+
+        import time
+        start_time = time.time()
+
+        result = tutor_agent.analyze_code(
+            code=req.code,
+            language=req.language,
+            question=question,
+            test_cases=test_cases
+        )
+
+        elapsed = round(time.time() - start_time, 1)
+        result["analysis_time"] = f"{elapsed}s"
+
+        return result
+    except Exception as e:
+        print(f"ERROR in run_code: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
