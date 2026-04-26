@@ -19,7 +19,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-[hsl(263,80%,7%)] text-white font-sans selection:bg-cyan-500/30 flex flex-col">
+        <div className="min-h-screen bg-mesh text-white font-sans selection:bg-primary/30 flex flex-col overflow-x-hidden">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />

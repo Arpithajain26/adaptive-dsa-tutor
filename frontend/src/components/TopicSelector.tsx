@@ -31,25 +31,29 @@ export default function TopicSelector({ onProblemReady }: Props) {
   };
 
   return (
-    <main className="min-h-screen w-full px-6 py-16 flex flex-col items-center">
-      <header className="text-center max-w-3xl mb-14 animate-fade-in-up">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-6 text-sm text-muted-foreground">
-          <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          AI-powered adaptive learning
+    <main className="min-h-screen w-full px-6 py-16 flex flex-col items-center bg-mesh">
+      <header className="text-center max-w-3xl mb-16 animate-fade-in-up">
+        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass mb-8 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+          Neural Engine Active
         </div>
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gradient mb-4">
-          Choose Your Battle
+        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase leading-none">
+          Select <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Objective</span>
         </h1>
-        <p className="text-lg text-muted-foreground">
-          Not a chatbot. Your personal DSA coach that learns how <span className="text-primary font-semibold">YOU</span> think.
-          Start anywhere — the agent adapts.
+        <p className="text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
+          The agent has mapped these domains to your current profile. Select a node to begin neural training.
         </p>
       </header>
 
       {error && (
-        <div className="mb-6 px-4 py-3 rounded-lg glass border border-destructive/40 text-destructive animate-slide-down max-w-xl">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 px-6 py-4 rounded-2xl border border-destructive/30 bg-destructive/5 text-destructive font-bold text-sm max-w-xl text-center"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
@@ -57,42 +61,45 @@ export default function TopicSelector({ onProblemReady }: Props) {
           const isLoading = loadingTopic === t.key;
           const disabled = !!loadingTopic;
           return (
-            <button
+            <motion.button
               key={t.key}
+              whileHover={{ y: -8, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => start(t.key)}
               disabled={disabled}
-              className={`group glass rounded-2xl p-7 text-left transition-all duration-300
-                hover:scale-[1.04] hover:border-primary/60 hover:shadow-[0_0_32px_hsl(189_100%_50%/0.35)]
-                disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed
-                animate-fade-in-up`}
-              style={{ animationDelay: `${i * 90}ms` }}
+              className={`group glass-panel p-8 text-left transition-all duration-500
+                hover:border-primary/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]
+                disabled:opacity-50 disabled:cursor-not-allowed
+                animate-fade-in-up flex flex-col h-full`}
+              style={{ animationDelay: `${i * 100}ms` }}
             >
-              <div className="text-5xl mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1">
+              <div className="text-5xl mb-6 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
                 {t.emoji}
               </div>
-              <h3 className="text-2xl font-bold mb-1.5">{t.key}</h3>
-              <p className="text-muted-foreground mb-4">{t.desc}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs px-2.5 py-1 rounded-full bg-secondary/60 text-foreground/80 border border-border">
+              <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">{t.key}</h3>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed flex-1">{t.desc}</p>
+              
+              <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-white/5 text-slate-400 border border-white/5">
                   {t.difficulty}
                 </span>
-                <span className="text-primary text-sm font-semibold inline-flex items-center gap-1">
+                <span className="text-primary text-xs font-black uppercase tracking-widest flex items-center gap-2">
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                      <Loader2 className="w-4 h-4 animate-spin" /> Link Active
                     </>
                   ) : (
-                    <>Start Challenge →</>
+                    <>Initialize <ChevronRight className="w-4 h-4" /></>
                   )}
                 </span>
               </div>
-            </button>
+            </motion.button>
           );
         })}
       </section>
 
-      <footer className="mt-16 text-xs text-muted-foreground/70">
-        🧠 Built for hackathon — adaptive difficulty · per-topic level tracking · auto hints & explanations
+      <footer className="mt-24 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+        Adaptive Learning Protocol v4.0.2
       </footer>
     </main>
   );

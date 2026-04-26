@@ -90,190 +90,82 @@ class TutorAgent:
         print("TutorAgent initialized with OpenAI API")
 
     def generate_question(self, topic: str, level: str, asked_questions: List[str]) -> QuestionResponse:
-        """Generates a DSA question for a specific topic and difficulty level."""
-
-        system_prompt = """You are an expert DSA tutor.
-        Generate high quality DSA questions like LeetCode.
-        Always respond in valid JSON format only.
-        No extra text outside JSON."""
-
+        """Generates a high-quality DSA question for a specific topic and difficulty level."""
+        system_prompt = "You are an elite DSA interviewer. Respond in strictly valid JSON."
         prompt = f"""
-        Generate a {level} level DSA question about {topic}.
+        Generate a {level} difficulty DSA problem about {topic}.
+        Avoid these already asked questions: {asked_questions}
         
-        Already asked (do not repeat): {asked_questions}
+        CRITICAL:
+        1. Format the 'question' field with a clear description, 3 distinct examples (Input, Output, Explanation), and constraints.
+        2. 'boilerplate_code' must be a clean Python class/method.
+        3. 'test_cases' must be 3 valid JSON objects for evaluation.
         
-        Respond ONLY with this JSON:
+        Structure:
         {{
-            "question": "Full question text. Include 3 examples in the description like LeetCode. Example 1: Input: nums = [1,2,3], Output: 3. Include constraints.",
+            "question": "# Problem Title\\n\\nDescription...\\n\\n### Example 1\\nInput: ...\\nOutput: ...",
             "topic": "{topic}",
             "level": "{level}",
-            "boilerplate_code": "Generate a LeetCode-style Python class boilerplate. Example: 'class Solution:\\n    def solve(self, nums: List[int]) -> int:\\n        # Write your logic here\\n        pass'",
-            "visualization_idea": "A short description of how to visualize this problem (e.g., 'Visualize it as a sliding window moving over the array').",
-            "test_cases": [
-                {{"input": "example input 1", "output": "expected output 1"}},
-                {{"input": "example input 2", "output": "expected output 2"}},
-                {{"input": "example input 3", "output": "expected output 3"}}
-            ],
-            "explanation_hint": "small hint about concept tested"
+            "boilerplate_code": "class Solution:\\n    def solve(self, ...):\\n        pass",
+            "visualization_idea": "...",
+            "test_cases": [{{"input": "...", "output": "..."}}],
+            "explanation_hint": "..."
         }}
         """
-
-        content = make_llm_call(system_prompt, prompt, max_tokens=1200)
-
+        content = make_llm_call(system_prompt, prompt, max_tokens=1500)
         if not content:
-            return QuestionResponse(
-                question=f"Find the maximum element in a {topic}.",
-                topic=topic,
-                level=level,
-                explanation_hint="Think about iterating once."
-            )
-
+            return QuestionResponse(question=f"Solve {topic}.", topic=topic, level=level)
         try:
-            clean = extract_json(content)
-            data = json.loads(clean)
+            data = json.loads(extract_json(content))
             return QuestionResponse(**data)
-        except Exception as e:
-            print(f"Parse error: {e}")
-            return QuestionResponse(
-                question=f"Explain the time complexity of searching in {topic}.",
-                topic=topic,
-                level=level
-            )
+        except:
+            return QuestionResponse(question=f"Solve {topic}.", topic=topic, level=level)
 
     def evaluate_answer(self, question: str, answer: str, topic: str, level: str) -> EvaluationResponse:
-        """Evaluates user answer and provides feedback."""
-
-        system_prompt = """You are an expert DSA tutor.
-        Evaluate answers for correctness and efficiency.
-        Always respond in valid JSON format only.
-        No extra text outside JSON."""
-
-        prompt = f"""
-        Question: {question}
-        Topic: {topic}
-        Difficulty: {level}
-        Student Answer (Code): {answer}
-        
-        Evaluation Guidelines:
-        1. If the code is correct but uses a brute-force approach (e.g., O(n^2) when O(n) is possible), mark 'is_correct' as true but provide feedback that encourages optimization. 
-        2. If the user is struggling (indicated by multiple failed attempts or very short code), provide a 'hint' that focuses on a 'Visualization' or a structural change.
-        3. Analyze Time and Space Complexity.
-        
-        Respond ONLY with this JSON:
-        {{
-            "is_correct": true or false,
-            "feedback": "detailed technical feedback. If brute-force, explain why it works but how it can be optimized.",
-            "hint": "progressive hint. If stuck, provide a visualization-based hint.",
-            "confidence_score": 0 to 100,
-            "optimal_complexity": "e.g., O(n) time, O(1) space",
-            "test_case_results": [
-                {{"input": "...", "expected": "...", "actual": "...", "passed": true/false}},
-                {{"input": "...", "expected": "...", "actual": "...", "passed": true/false}},
-                {{"input": "...", "expected": "...", "actual": "...", "passed": true/false}}
-            ]
-        }}
-        """
-
+        """Evaluates user code logic and correctness."""
+        system_prompt = "You are an expert DSA technical reviewer. Respond in strictly valid JSON."
+        prompt = f"Question: {question}\\nStudent Answer: {answer}\\nTopic: {topic}\\nLevel: {level}\\n\\nEvaluate logic, complexity, and correctness."
         content = make_llm_call(system_prompt, prompt, max_tokens=1000)
-
         if not content:
-            return EvaluationResponse(
-                is_correct=False,
-                feedback="Could not evaluate. Please try again.",
-                hint="Check your logic and try again.",
-                confidence_score=0,
-                optimal_complexity="Unknown"
-            )
-
+            return EvaluationResponse(is_correct=False, feedback="Error processing.", confidence_score=0)
         try:
-            clean = extract_json(content)
-            data = json.loads(clean)
+            data = json.loads(extract_json(content))
             return EvaluationResponse(**data)
-        except Exception as e:
-            print(f"Parse error: {e}")
-            return EvaluationResponse(
-                is_correct=True,
-                feedback="Answer recorded. Moving to next question!",
-                confidence_score=100
-            )
+        except:
+            return EvaluationResponse(is_correct=True, feedback="Recorded.", confidence_score=100)
 
     def assess_initial_level(self, user_background: str) -> str:
         """Determines user level from background."""
-
-        system_prompt = "You are a DSA tutor. Reply with only one word: beginner, intermediate, or advanced."
-        prompt = f"Background: {user_background}. What is this student's DSA level?"
-
-        content = make_llm_call(system_prompt, prompt, max_tokens=10)
-
+        system_prompt = "Reply with only one word: beginner, intermediate, or advanced."
+        content = make_llm_call(system_prompt, user_background, max_tokens=10)
         if content:
-            level = content.strip().lower()
-            if level in ["beginner", "intermediate", "advanced"]:
-                return level
+            l = content.strip().lower()
+            if l in ["beginner", "intermediate", "advanced"]: return l
         return "beginner"
 
     def get_progressive_hint(self, question: str, topic: str, level: str, hint_level: int) -> HintResponse:
-        """Gets a progressive hint based on hint level."""
-
-        if hint_level == 1:
-            instruction = "Give a high level concept nudge only."
-        elif hint_level == 2:
-            instruction = "Suggest a specific data structure or algorithm."
-        else:
-            instruction = "Give detailed logic breakdown but no code."
-
+        """Gets a progressive hint."""
         system_prompt = "You are a DSA tutor. Respond in valid JSON only."
-        prompt = f"""
-        Question: {question}
-        Topic: {topic}
-        Level: {level}
-        
-        {instruction}
-        
-        Respond ONLY with: {{"hint": "your hint here"}}
-        """
-
+        prompt = f"Question: {question}\\nHint Level: {hint_level}\\nProvide a hint without revealing code."
         content = make_llm_call(system_prompt, prompt, max_tokens=400)
-
-        if not content:
-            return HintResponse(hint=f"Think about the properties of {topic}.")
-
+        if not content: return HintResponse(hint="Think about the data structure.")
         try:
-            clean = extract_json(content)
-            data = json.loads(clean)
+            data = json.loads(extract_json(content))
             return HintResponse(**data)
-        except Exception as e:
-            print(f"Parse error: {e}")
-            return HintResponse(hint="Break the problem into smaller parts.")
+        except: return HintResponse(hint="Break it down.")
 
     def get_explanation(self, question: str, user_answer: Optional[str] = None) -> ExplanationResponse:
-        """Gets full explanation for a question."""
-
-        system_prompt = "You are a DSA tutor. Respond in valid JSON only."
-        prompt = f"""
-        Question: {question}
-        Student attempt: {user_answer}
-        
-        Explain:
-        1. Optimal approach
-        2. Step by step logic
-        3. Time and space complexity
-        4. Python code snippet
-        
-        Respond ONLY with: {{"explanation": "markdown formatted explanation"}}
-        """
-
+        """Provides full masterclass explanation."""
+        system_prompt = "You are a DSA Lead Instructor. Respond in valid JSON only."
+        prompt = f"Question: {question}\\nStudent Attempt: {user_answer}\\nProvide optimal approach and walkthrough."
         content = make_llm_call(system_prompt, prompt, max_tokens=1500)
-
-        if not content:
-            return ExplanationResponse(explanation="Think about the optimal approach for this problem type.")
-
+        if not content: return ExplanationResponse(explanation="Consult a textbook.")
         try:
-            clean = extract_json(content)
-            data = json.loads(clean)
+            data = json.loads(extract_json(content))
             return ExplanationResponse(**data)
-        except Exception as e:
-            print(f"Parse error: {e}")
-            return ExplanationResponse(explanation="Review the problem constraints and think about time complexity.")
+        except: return ExplanationResponse(explanation="Masterclass unavailable.")
+
+
 
     def get_session_summary(self, topic_accuracy: dict) -> SummaryResponse:
         """Gets session summary and recommendations."""
@@ -549,22 +441,25 @@ Return JSON:
         Question: {question}
         Topic: {topic}
         
-        Generate a 6-10 frame visualization of the OPTIMAL algorithm for this problem.
-        Make it clear and educational.
+        Generate a 6-12 frame visualization of the OPTIMAL algorithm for this problem.
+        
+        Guidelines:
+        - For "array"/"sort"/"search": state must be {{ "array": [...], "pointers": [{{ "name": "i", "index": 0, "color": "primary" }}], "swap": [idx1, idx2] }}
+        - For "list": state must be {{ "nodes": [{{ "value": 1 }}, {{ "value": 2 }}], "pointers": [{{ "name": "head", "index": 0 }}] }}
+        - For "tree": state must be {{ "tree": {{ "value": 10, "left": {{...}}, "right": {{...}}, "highlight": "primary" }} }}
         
         Respond ONLY with this JSON:
         {{
             "topic_kind": "{topic}",
             "frames": [
                 {{
-                    "type": "array",
-                    "title": "Initial State",
-                    "narration": "We start with the input array...",
-                    "state": {{ "array": [1, 2, 3], "pointers": [] }}
-                }},
-                ...
+                    "type": "array" | "list" | "tree" | "generic",
+                    "title": "Step Title",
+                    "narration": "What is happening in this step?",
+                    "state": {{ ... }}
+                }}
             ],
-            "summary": "This algorithm uses ... to achieve O(n) complexity."
+            "summary": "Final explanation of the algorithm's complexity."
         }}
         """
         
