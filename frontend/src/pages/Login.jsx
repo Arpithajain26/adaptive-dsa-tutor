@@ -18,7 +18,7 @@ export default function Login() {
     try {
       await tutorCall("signin", { username, password });
       navigate("/learn");
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || "Invalid credentials");
     } finally {
       setLoading(false);

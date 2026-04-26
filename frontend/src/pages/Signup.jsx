@@ -20,7 +20,7 @@ export default function Signup() {
       await tutorCall("signup", { email, username, password });
       localStorage.removeItem("dsa_tutor_placed");
       navigate("/learn");
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || "Signup failed");
     } finally {
       setLoading(false);
