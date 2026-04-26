@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { tutorCall, type Problem } from "@/lib/tutor-api";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 const TOPICS = [
   { key: "Arrays", emoji: "🔢", desc: "Master array manipulation", difficulty: "Beginner Friendly" },
@@ -17,6 +18,7 @@ interface Props {
 export default function TopicSelector({ onProblemReady }: Props) {
   const [loadingTopic, setLoadingTopic] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const userLevel = localStorage.getItem("dsa_tutor_placed") || "beginner";
 
   const start = async (topic: string) => {
     setError(null);
@@ -33,9 +35,14 @@ export default function TopicSelector({ onProblemReady }: Props) {
   return (
     <main className="min-h-screen w-full px-6 py-16 flex flex-col items-center bg-mesh">
       <header className="text-center max-w-3xl mb-16 animate-fade-in-up">
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass mb-8 text-[10px] font-black uppercase tracking-widest text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-          Neural Engine Active
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            Neural Engine Active
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest">
+            Current Rank: {userLevel}
+          </div>
         </div>
         <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase leading-none">
           Select <br />

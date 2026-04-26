@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Brain, Check, X } from "lucide-react";
 import { tutorCall } from "@/lib/tutor-api";
+import { motion, AnimatePresence } from "framer-motion";
 
 type MCQ = {
   question: string;
