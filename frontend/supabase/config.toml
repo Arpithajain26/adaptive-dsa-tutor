@@ -1,0 +1,4 @@
+project_id = "hmlnhfosccgxmtekcgod"
+
+[functions.dsa-tutor]
+verify_jwt = false

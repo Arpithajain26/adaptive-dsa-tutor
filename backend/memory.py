@@ -12,14 +12,13 @@ class SessionState(BaseModel):
     current_level: str = "beginner"
     score: int = 0
     streak: int = 0
-    weak_topics: List[str] = []
+    weak_topics: List[str] = Field(default_factory=list)
     current_topic: Optional[str] = None
     last_question: Optional[str] = None
     last_boilerplate: Optional[str] = None
     last_visualization: Optional[str] = None
     last_test_cases: Optional[List[Dict[str, str]]] = None
     is_assessed: bool = False
-    # Use Field(default_factory=dict/list) to avoid mutable defaults warning in pydantic
     topic_attempts: Dict[str, int] = Field(default_factory=dict)
     topic_correct: Dict[str, int] = Field(default_factory=dict)
     asked_questions: List[str] = Field(default_factory=list)
@@ -27,6 +26,11 @@ class SessionState(BaseModel):
     correct_answers: int = 0
     created_at: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     last_updated: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
+    
+    # Core Feature 1: Consecutive wrong tracking and per topic levels
+    consecutive_wrong: int = 0
+    topic_levels: Dict[str, str] = Field(default_factory=dict)
+    mistake_patterns: List[str] = Field(default_factory=list)
 
 class MemoryManager:
     def __init__(self):
@@ -37,13 +41,15 @@ class MemoryManager:
     def _load_all(self):
         if os.path.exists(SESSION_FILE):
             with open(SESSION_FILE, "r") as f:
-                data = json.load(f)
-                for sid, sdata in data.items():
-                    self.sessions[sid] = SessionState(**sdata)
+                try:
+                    data = json.load(f)
+                    for sid, sdata in data.items():
+                        self.sessions[sid] = SessionState(**sdata)
+                except Exception as e:
+                    print(f"Error loading session data: {e}")
 
     def _save_all(self):
         with open(SESSION_FILE, "w") as f:
-            # Dump Pydantic models to dicts and make it pretty with indent=2
             data = {sid: state.model_dump() for sid, state in self.sessions.items()}
             json.dump(data, f, indent=2)
 
@@ -107,35 +113,47 @@ class MemoryManager:
             state.topic_correct[topic] = state.topic_correct.get(topic, 0) + 1
             state.score += 10
             state.streak = max(1, state.streak + 1)
+            
+            # Reset consecutive wrong
+            state.consecutive_wrong = 0
+            
             # Remove from weak topics if they get it right
             if topic in state.weak_topics:
                 state.weak_topics.remove(topic)
         else:
             state.streak = min(-1, state.streak - 1)
-            if topic not in state.weak_topics:
-                state.weak_topics.append(topic)
+            
+            # Increment consecutive wrong
+            state.consecutive_wrong += 1
+            
+            # If consecutive wrong >= 2, add to weak topics
+            if state.consecutive_wrong >= 2:
+                if topic not in state.weak_topics:
+                    state.weak_topics.append(topic)
         
-        # Adaptive difficulty logic
+        # Adaptive difficulty logic per topic
         if state.streak >= 3:
-            self._upgrade_level(state)
+            self._upgrade_level(state, topic)
             state.streak = 0 # reset streak after level change
-        elif state.streak <= -2:
-            self._downgrade_level(state)
+        elif state.streak <= -3:
+            self._downgrade_level(state, topic)
             state.streak = 0 # reset streak after level change
             
         self.update_session(session_id, state)
         
-    def _upgrade_level(self, state: SessionState):
-        if state.current_level == "beginner":
-            state.current_level = "intermediate"
-        elif state.current_level == "intermediate":
-            state.current_level = "advanced"
+    def _upgrade_level(self, state: SessionState, topic: str):
+        current = state.topic_levels.get(topic, state.current_level)
+        if current == "beginner":
+            state.topic_levels[topic] = "intermediate"
+        elif current == "intermediate":
+            state.topic_levels[topic] = "advanced"
 
-    def _downgrade_level(self, state: SessionState):
-        if state.current_level == "advanced":
-            state.current_level = "intermediate"
-        elif state.current_level == "intermediate":
-            state.current_level = "beginner"
+    def _downgrade_level(self, state: SessionState, topic: str):
+        current = state.topic_levels.get(topic, state.current_level)
+        if current == "advanced":
+            state.topic_levels[topic] = "intermediate"
+        elif current == "intermediate":
+            state.topic_levels[topic] = "beginner"
 
 # Global memory manager instance for the app
 memory_manager = MemoryManager()

@@ -2,19 +2,20 @@ import os
 import json
 import re
 from dotenv import load_dotenv
-import google.generativeai as genai
+from openai import OpenAI
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 load_dotenv()
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gpt-4o"
 
-api_key = os.getenv("GEMINI_API_KEY")
-print(f"API Key loaded: {'YES' if api_key else 'NO - CHECK .env FILE'}")
+api_key = os.getenv("OPENAI_API_KEY")
+print(f"OpenAI API Key loaded: {'YES' if api_key else 'NO - CHECK .env FILE'}")
 
+client = None
 if api_key:
-    genai.configure(api_key=api_key)
+    client = OpenAI(api_key=api_key)
 
 class QuestionResponse(BaseModel):
     question: str
@@ -31,8 +32,8 @@ class EvaluationResponse(BaseModel):
     hint: Optional[str] = None
     confidence_score: int
     optimal_complexity: Optional[str] = None
-    optimal_code: Optional[str] = None # New field to show the answer if user is stuck
-    test_case_results: Optional[List[Dict[str, Any]]] = None # List of {"input": "...", "expected": "...", "actual": "...", "passed": true}
+    optimal_code: Optional[str] = None 
+    test_case_results: Optional[List[Dict[str, Any]]] = None 
 
 class HintResponse(BaseModel):
     hint: str
@@ -45,6 +46,17 @@ class SummaryResponse(BaseModel):
     weakest_area: str
     suggested_next_topic: str
 
+class VizFrame(BaseModel):
+    type: str # "array", "list", "tree", "sort", "search", "generic"
+    title: str
+    narration: str
+    state: Dict[str, Any]
+
+class VizData(BaseModel):
+    topic_kind: str
+    frames: List[VizFrame]
+    summary: str
+
 def extract_json(text: str) -> str:
     """Safely extract a JSON object from LLM output."""
     match = re.search(r'\{.*\}', text, re.DOTALL)
@@ -53,26 +65,29 @@ def extract_json(text: str) -> str:
     return text
 
 def make_llm_call(system_prompt: str, user_prompt: str, max_tokens: int = 800):
-    """Synchronous LLM call using Gemini client."""
+    """Synchronous LLM call using OpenAI client."""
+    if not client:
+        print("OpenAI client not initialized.")
+        return None
     try:
-        model = genai.GenerativeModel(
-            model_name=MODEL_NAME,
-            system_instruction=system_prompt
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=max_tokens,
+            temperature=0.7,
+            response_format={ "type": "json_object" } if "JSON" in system_prompt else None
         )
-        response = model.generate_content(
-            user_prompt,
-            generation_config=genai.types.GenerationConfig(
-                max_output_tokens=max_tokens,
-            )
-        )
-        return response.text
+        return response.choices[0].message.content
     except Exception as e:
-        print(f"LLM API call failed: {e}")
+        print(f"OpenAI API call failed: {e}")
         return None
 
 class TutorAgent:
     def __init__(self):
-        print("TutorAgent initialized with real Claude API")
+        print("TutorAgent initialized with OpenAI API")
 
     def generate_question(self, topic: str, level: str, asked_questions: List[str]) -> QuestionResponse:
         """Generates a DSA question for a specific topic and difficulty level."""
@@ -92,7 +107,7 @@ class TutorAgent:
             "question": "Full question text. Include 3 examples in the description like LeetCode. Example 1: Input: nums = [1,2,3], Output: 3. Include constraints.",
             "topic": "{topic}",
             "level": "{level}",
-            "boilerplate_code": "Generate a LeetCode-style Python class boilerplate. Example: 'class Solution:\n    def solve(self, nums: List[int]) -> int:\n        # Write your logic here\n        pass'",
+            "boilerplate_code": "Generate a LeetCode-style Python class boilerplate. Example: 'class Solution:\\n    def solve(self, nums: List[int]) -> int:\\n        # Write your logic here\\n        pass'",
             "visualization_idea": "A short description of how to visualize this problem (e.g., 'Visualize it as a sliding window moving over the array').",
             "test_cases": [
                 {{"input": "example input 1", "output": "expected output 1"}},
@@ -103,7 +118,7 @@ class TutorAgent:
         }}
         """
 
-        content = make_llm_call(system_prompt, prompt, max_tokens=800)
+        content = make_llm_call(system_prompt, prompt, max_tokens=1200)
 
         if not content:
             return QuestionResponse(
@@ -159,7 +174,7 @@ class TutorAgent:
         }}
         """
 
-        content = make_llm_call(system_prompt, prompt, max_tokens=800)
+        content = make_llm_call(system_prompt, prompt, max_tokens=1000)
 
         if not content:
             return EvaluationResponse(
@@ -247,7 +262,7 @@ class TutorAgent:
         Respond ONLY with: {{"explanation": "markdown formatted explanation"}}
         """
 
-        content = make_llm_call(system_prompt, prompt, max_tokens=1200)
+        content = make_llm_call(system_prompt, prompt, max_tokens=1500)
 
         if not content:
             return ExplanationResponse(explanation="Think about the optimal approach for this problem type.")
@@ -325,11 +340,11 @@ class TutorAgent:
         {{
             "test_results": [
                 {{
-                    "test_case": "the input",
+                    "input": "test input",
                     "expected": "expected output",
                     "got": "what student code would return",
                     "passed": true or false,
-                    "feedback": "one line explanation"
+                    "explanation": "one line explanation"
                 }}
             ],
             "overall_correct": true or false,
@@ -340,7 +355,7 @@ class TutorAgent:
         }}
         """
 
-        content = make_llm_call(system_prompt, prompt, max_tokens=1000)
+        content = make_llm_call(system_prompt, prompt, max_tokens=1500)
 
         if not content:
             return {
@@ -365,5 +380,212 @@ class TutorAgent:
                 "feedback": "Analysis failed. Please try again.",
                 "suggestion": "Check your code syntax."
             }
+
+    def suggest_next_topic(self, topic_accuracy: dict) -> dict:
+        """Suggests the best next topic to study based on performance."""
+        system_prompt = "You are an AI Tutor. Respond in valid JSON only."
+        prompt = f"""
+        Student performance: {json.dumps(topic_accuracy)}
+        
+        Suggest the best next topic to study.
+        Consider: weak topics need more practice, strong topics can be skipped.
+        
+        Respond ONLY with this JSON:
+        {{
+            "suggested_topic": "string",
+            "reason": "string",
+            "focus_areas": ["list of strings"]
+        }}
+        """
+        
+        content = make_llm_call(system_prompt, prompt, max_tokens=300)
+        
+        if not content:
+            return {
+                "suggested_topic": "Arrays",
+                "reason": "Default starting point.",
+                "focus_areas": ["Fundamentals"]
+            }
+            
+        try:
+            clean = extract_json(content)
+            return json.loads(clean)
+        except Exception as e:
+            print(f"Parse error in suggest_next_topic: {e}")
+            return {
+                "suggested_topic": "Arrays",
+                "reason": "Failed to generate suggestion.",
+                "focus_areas": ["Fundamentals"]
+            }
+            
+    def generate_problem_statement(self, topic: str, level: str, asked_questions: List[str]) -> dict:
+        """Generates a LeetCode style problem statement."""
+        system_prompt = """You are an expert DSA problem setter like LeetCode.
+        Always respond in valid JSON format only. No extra text outside JSON."""
+        
+        prompt = f"""
+        Generate a {level} difficulty {topic} problem.
+        Avoid these already asked questions: {asked_questions}
+        
+        Respond ONLY with this JSON:
+        {{
+            "title": "Two Sum",
+            "description": "Given array find...",
+            "examples": [
+              {{
+                "input": "nums = [2,7,11,15]",
+                "output": "9",
+                "explanation": "2+7=9"
+              }}
+            ],
+            "constraints": ["2 <= n <= 10^4"],
+            "function_signature": {{
+              "python": "def solution(nums):\\n    pass",
+              "java": "class Solution {{...}}",
+              "cpp": "class Solution {{...}}"
+            }},
+            "test_cases": [
+              {{
+                "input": "[2,7,11,15]",
+                "expected_output": "9",
+                "explanation": "basic case"
+              }}
+            ],
+            "hints": [
+              "Think about what you need to track"
+            ],
+            "optimal_solution": {{
+              "approach": "HashMap",
+              "time_complexity": "O(n)",
+              "space_complexity": "O(n)",
+              "explanation": "Single pass with hashmap"
+            }},
+            "topic": "{topic}",
+            "level": "{level}"
+        }}
+        """
+        
+        content = make_llm_call(system_prompt, prompt, max_tokens=1500)
+        
+        if not content:
+             return {
+                "title": f"Problem on {topic}",
+                "description": f"Solve a {level} level problem on {topic}.",
+                "examples": [],
+                "constraints": [],
+                "function_signature": {"python": "def solve():\n    pass"},
+                "test_cases": [],
+                "hints": [],
+                "optimal_solution": {"approach": "Unknown", "time_complexity": "Unknown", "space_complexity": "Unknown", "explanation": ""},
+                "topic": topic,
+                "level": level
+             }
+
+        try:
+            clean = extract_json(content)
+            return json.loads(clean)
+        except Exception as e:
+            print(f"Parse error in generate_problem_statement: {e}")
+            return {
+                "title": f"Problem on {topic}",
+                "description": f"Solve a {level} level problem on {topic}.",
+                "examples": [],
+                "constraints": [],
+                "function_signature": {"python": "def solve():\n    pass"},
+                "test_cases": [],
+                "hints": [],
+                "optimal_solution": {"approach": "Unknown", "time_complexity": "Unknown", "space_complexity": "Unknown", "explanation": ""},
+                "topic": topic,
+                "level": level
+            }
+
+    def generate_placement_quiz(self) -> dict:
+        """Generates a 5-question placement quiz."""
+        system_prompt = """You are a DSA placement examiner. Generate EXACTLY 5 multiple-choice questions to assess a student's level (beginner / intermediate / advanced).
+Mix difficulties: 2 beginner (basic data structures, Big-O basics), 2 intermediate (sorting, recursion, BFS/DFS, hash maps), 1 advanced (DP, graph algorithms, complex tree ops).
+Each question has 4 options, exactly one correct.
+Return JSON:
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["A", "B", "C", "D"],
+      "correct_index": 0,
+      "difficulty": "beginner" | "intermediate" | "advanced",
+      "topic": "string",
+      "explanation": "1-sentence why"
+    }
+  ]
+}"""
+        content = make_llm_call(system_prompt, "Generate the placement quiz.", max_tokens=1500)
+        
+        if not content:
+            return {"questions": []}
+            
+        try:
+            clean = extract_json(content)
+            data = json.loads(clean)
+            data["questions"] = data.get("questions", [])[:5]
+            return data
+        except Exception as e:
+            print(f"Parse error in generate_placement_quiz: {e}")
+            return {"questions": []}
+
+    def generate_visualization(self, question: str, topic: str) -> VizData:
+        """Generates a step-by-step visualization for a DSA problem."""
+        system_prompt = """You are an expert DSA visualizer.
+        Generate a step-by-step animation of an algorithm solving a problem.
+        The animation consists of "frames". Each frame has a state (data) and a narration.
+        
+        Types:
+        - "array": { "array": [1,2,3], "pointers": [{"name": "i", "index": 0, "color": "primary"}] }
+        - "sort": { "array": [3,1,2], "swap": [0, 1] }
+        - "tree": { "tree": {"value": 10, "left": {"value": 5}, "right": {"value": 15}, "highlight": "primary"} }
+        - "list": { "nodes": [{"value": 1}, {"value": 2}], "pointers": [{"name": "head", "index": 0}] }
+        
+        Always respond in valid JSON format only."""
+        
+        prompt = f"""
+        Question: {question}
+        Topic: {topic}
+        
+        Generate a 6-10 frame visualization of the OPTIMAL algorithm for this problem.
+        Make it clear and educational.
+        
+        Respond ONLY with this JSON:
+        {{
+            "topic_kind": "{topic}",
+            "frames": [
+                {{
+                    "type": "array",
+                    "title": "Initial State",
+                    "narration": "We start with the input array...",
+                    "state": {{ "array": [1, 2, 3], "pointers": [] }}
+                }},
+                ...
+            ],
+            "summary": "This algorithm uses ... to achieve O(n) complexity."
+        }}
+        """
+        
+        content = make_llm_call(system_prompt, prompt, max_tokens=2000)
+        
+        if not content:
+            return VizData(
+                topic_kind=topic,
+                frames=[VizFrame(type="generic", title="Error", narration="Could not generate visualization.", state={"text": "Service unavailable"})],
+                summary="Please try again later."
+            )
+            
+        try:
+            clean = extract_json(content)
+            return VizData(**json.loads(clean))
+        except Exception as e:
+            print(f"Parse error in generate_visualization: {e}")
+            return VizData(
+                topic_kind=topic,
+                frames=[VizFrame(type="generic", title="Error", narration="Failed to parse visualization data.", state={"text": str(e)})],
+                summary="Technical error."
+            )
 
 tutor_agent = TutorAgent()

@@ -18,7 +18,10 @@
     "total_questions": 0,
     "correct_answers": 0,
     "created_at": "2026-04-25T16:10:49.626236",
-    "last_updated": "2026-04-25T16:10:49.626275"
+    "last_updated": "2026-04-25T16:10:49.626275",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
   },
   "z@gmail.com": {
     "user_name": null,
@@ -52,12 +55,19 @@
       "Find the maximum element in a Arrays.",
       "Find the maximum element in a Arrays.",
       "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays.",
       "Find the maximum element in a Arrays."
     ],
     "total_questions": 8,
     "correct_answers": 0,
     "created_at": "2026-04-25T16:42:24.296090",
-    "last_updated": "2026-04-25T20:21:45.873335"
+    "last_updated": "2026-04-25T23:32:15.860687",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
   },
   "test-session-1": {
     "user_name": null,
@@ -85,9 +95,65 @@
     "total_questions": 1,
     "correct_answers": 0,
     "created_at": "2026-04-25T17:32:52.987137",
-    "last_updated": "2026-04-25T17:33:03.082464"
+    "last_updated": "2026-04-25T17:33:03.082464",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
   },
   "guest_user": {
+    "user_name": null,
+    "user_email": "guest_user",
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [],
+    "current_topic": "Arrays",
+    "last_question": "Find the maximum element in a Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": false,
+    "topic_attempts": {},
+    "topic_correct": {},
+    "asked_questions": [
+      "Find the maximum element in a Arrays.",
+      "Find the maximum element in a Arrays."
+    ],
+    "total_questions": 0,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T17:35:07.469619",
+    "last_updated": "2026-04-25T22:24:55.755612",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
+  },
+  "test@example.com": {
+    "user_name": "Test User",
+    "user_email": "test@example.com",
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [],
+    "current_topic": "Arrays",
+    "last_question": "Find the maximum element in a Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": null,
+    "is_assessed": true,
+    "topic_attempts": {},
+    "topic_correct": {},
+    "asked_questions": [
+      "Find the maximum element in a Arrays."
+    ],
+    "total_questions": 0,
+    "correct_answers": 0,
+    "created_at": "2026-04-25T22:39:52.296738",
+    "last_updated": "2026-04-25T22:40:21.059403",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
+  },
+  "test1": {
     "user_name": null,
     "user_email": null,
     "current_level": "beginner",
@@ -107,7 +173,38 @@
     ],
     "total_questions": 0,
     "correct_answers": 0,
-    "created_at": "2026-04-25T17:35:07.469619",
-    "last_updated": "2026-04-25T17:35:07.854258"
+    "created_at": "2026-04-25T23:35:12.079333",
+    "last_updated": "2026-04-25T23:35:12.621177",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
+  },
+  "9ba0d178-64a3-4e0c-92e5-cda6dd60865f": {
+    "user_name": null,
+    "user_email": null,
+    "current_level": "beginner",
+    "score": 0,
+    "streak": 0,
+    "weak_topics": [],
+    "current_topic": "Arrays",
+    "last_question": "Solve a beginner level problem on Arrays.",
+    "last_boilerplate": null,
+    "last_visualization": null,
+    "last_test_cases": [],
+    "is_assessed": false,
+    "topic_attempts": {},
+    "topic_correct": {},
+    "asked_questions": [
+      "Problem on Arrays",
+      "Problem on Arrays",
+      "Problem on Arrays"
+    ],
+    "total_questions": 0,
+    "correct_answers": 0,
+    "created_at": "2026-04-26T00:48:37.656600",
+    "last_updated": "2026-04-26T01:04:42.481437",
+    "consecutive_wrong": 0,
+    "topic_levels": {},
+    "mistake_patterns": []
   }
 }
