@@ -108,15 +108,32 @@ class SubmitPlacementRequest(BaseModel):
     session_id: str
     answers: List[PlacementAnswer]
 
+class AuthRequest(BaseModel):
+    email: Optional[str] = None
+    username: str
+    password: str
+
 # --- Endpoints ---
 
 @app.get("/")
 def root():
     return {
         "message": "Adaptive DSA Tutor API is running!",
-        "docs": "Visit /docs to test all endpoints",
-        "endpoints": ["/start", "/answer", "/progress", "/hint", "/explain", "/summary", "/reset", "/suggest-topic", "/generate-problem", "/run-code"]
+        "status": "online",
+        "engine": "GPT-4o"
     }
+
+@app.post("/signup")
+def signup(req: AuthRequest):
+    # For hackathon: just return success and log the user
+    print(f"New user signup: {req.username}")
+    return {"message": "Signup successful", "username": req.username}
+
+@app.post("/signin")
+def signin(req: AuthRequest):
+    # For hackathon: just return success
+    print(f"User signin: {req.username}")
+    return {"message": "Signin successful", "username": req.username}
 
 @app.post("/start", response_model=StartResponse)
 def start_session(req: StartRequest):

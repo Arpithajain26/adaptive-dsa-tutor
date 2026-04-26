@@ -23,8 +23,8 @@ export async function tutorCall<T = any>(action: string, payload: Record<string,
   try {
     let response;
     // Map action to FastAPI endpoints
-    if (action === "progress") {
-      response = await axios.get(`${API_URL}/progress`, { params: { session_id } });
+    if (action === "progress" || action === "resume" || action === "summary") {
+      response = await axios.get(`${API_URL}/${action}`, { params: { session_id } });
     } else if (action === "placement-quiz") {
       response = await axios.get(`${API_URL}/placement-quiz`);
     } else {

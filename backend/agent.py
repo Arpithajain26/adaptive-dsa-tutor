@@ -23,7 +23,7 @@ class QuestionResponse(BaseModel):
     level: str
     boilerplate_code: Optional[str] = None
     visualization_idea: Optional[str] = None
-    test_cases: Optional[List[Dict[str, str]]] = None # List of {"input": "...", "output": "..."}
+    test_cases: Optional[List[Dict[str, str]]] = None # List of {"input": "...", "expected_output": "..."}
     explanation_hint: Optional[str] = None
 
 class EvaluationResponse(BaseModel):
@@ -108,7 +108,7 @@ class TutorAgent:
             "level": "{level}",
             "boilerplate_code": "class Solution:\\n    def solve(self, ...):\\n        pass",
             "visualization_idea": "...",
-            "test_cases": [{{"input": "...", "output": "..."}}],
+            "test_cases": [{{"input": "...", "expected_output": "..."}}],
             "explanation_hint": "..."
         }}
         """
@@ -124,7 +124,31 @@ class TutorAgent:
     def evaluate_answer(self, question: str, answer: str, topic: str, level: str) -> EvaluationResponse:
         """Evaluates user code logic and correctness."""
         system_prompt = "You are an expert DSA technical reviewer. Respond in strictly valid JSON."
-        prompt = f"Question: {question}\\nStudent Answer: {answer}\\nTopic: {topic}\\nLevel: {level}\\n\\nEvaluate logic, complexity, and correctness."
+        prompt = f"""
+        Question: {question}
+        Student Answer: {answer}
+        Topic: {topic}
+        Level: {level}
+
+        Evaluate the student's code logic, complexity, and correctness.
+        Return a valid JSON object with these fields:
+        {{
+            "is_correct": boolean,
+            "feedback": "detailed feedback string",
+            "hint": "helpful hint if wrong, else null",
+            "confidence_score": integer 0-100,
+            "optimal_complexity": "e.g. O(n)",
+            "optimal_code": "optimal implementation",
+            "test_case_results": [
+                {{
+                    "input": "test input",
+                    "expected": "expected output",
+                    "got": "what student code returns",
+                    "passed": boolean
+                }}
+            ]
+        }}
+        """
         content = make_llm_call(system_prompt, prompt, max_tokens=1000)
         if not content:
             return EvaluationResponse(is_correct=False, feedback="Error processing.", confidence_score=0)
